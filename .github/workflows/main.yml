@@ -30,4 +30,4 @@ jobs:
         AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
         AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
       run: |
-        python daily_task.py
+        python scripts/parse_data.py
