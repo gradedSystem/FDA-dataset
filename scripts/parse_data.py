@@ -3,6 +3,7 @@ import boto3
 import requests
 import pandas as pd
  
+from re import sub
 from io import StringIO
 from bs4 import BeautifulSoup
 from datetime import datetime
@@ -95,13 +96,21 @@ def get_latest_updated_date():
     print("No update information found.")
     return None
 
+def title_case_with_exceptions(name):
+    words = name.lower().split()
+    exceptions = {'and', 'of', 'the', 'in', 'for', 'on', 'at', 'by', 'with'}
+    return ' '.join([word.capitalize() if word not in exceptions else word for word in words])
+
 def get_data():
     response = requests.get(source_url)
     data = response.json()
     df = pd.DataFrame(data)
     return df
 
-def split_idbr_financial_contribution(df, date):
+def split_idbr_financial_contribution(df):
+    df['member'] = df['member'].apply(title_case_with_exceptions)
+    df['as_of_date'] = pd.to_datetime(df['as_of_date'], format='%d/%m/%Y').dt.strftime('%Y-%m-%d')
+
     # Dataset 1: Membership and Financial Contributions
     dataset1 = df[["member", "subscription_amount", "percentage_of_total_subscriptions", "total_amounts", "as_of_date"]]
 
@@ -112,9 +121,13 @@ def split_idbr_financial_contribution(df, date):
 
 if __name__ == '__main__':
     df = get_data()
+
     date = get_latest_updated_date()
-    df1, df2 =  split_idbr_financial_contribution(df, date)
+
+    df1, df2 =  split_idbr_financial_contribution(df)
+
     filename1, filename2 = "idbr_financial_contribution", "idbr_voting_power"
+    
     for df, filename in zip([df1, df2], [filename1, filename2]):
         upload_df_to_s3_with_date_check(df, bucket_name, folder_name, filename, date, aws_access_key, aws_secret_key)
         
