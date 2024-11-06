@@ -55,20 +55,6 @@ def upload_df_to_s3_with_date_check(df, bucket_name, folder_name, base_filename,
         s3_client.put_object(Bucket=bucket_name, Key=s3_key, Body=csv_buffer.getvalue())
         print(f"File uploaded to s3://{bucket_name}/{s3_key}")
 
-    # Delete old files if any
-    if files_to_replace:
-        print("Replacing older files:", files_to_replace)
-        delete_objects = [{"Key": key} for key in files_to_replace]
-        s3_client.delete_objects(Bucket=bucket_name, Delete={"Objects": delete_objects})
-
-    # Convert DataFrame to CSV in-memory
-    csv_buffer = StringIO()
-    df.to_csv(csv_buffer, index=False)
-
-    # Upload the new CSV to S3
-    s3_client.put_object(Bucket=bucket_name, Key=s3_key, Body=csv_buffer.getvalue())
-    print(f"File uploaded to s3://{bucket_name}/{s3_key}")
-
 def get_latest_updated_date():
     response = requests.get(website_url)
     soup = BeautifulSoup(response.text, 'html.parser')
