@@ -88,4 +88,4 @@ def fetch_data_from_api():
 
 if __name__ == '__main__':
     fetch_data_from_api()
-    upload_df_to_s3_with_date_check(bucket_name, folder_name, f"fda_data_{current_year}_{str(current_month).zfill(2)}.json", aws_access_key, aws_secret_key)
+    upload_df_to_s3_with_date_check(bucket_name, folder_name, f"fda_data_{current_year}_{str(current_month-1).zfill(2)}.json", aws_access_key, aws_secret_key)
