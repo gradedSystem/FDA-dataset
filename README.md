@@ -8,6 +8,8 @@ This data-engineering project is currently using FDA data from [FDA-food-dataset
     - [x] #1 Create `scripts/parse_data.py` which will be used in for GH actions
     - [x] Create `env` in the settings 
     - [ ] Use AWS S3, GLUE in order to process the data
+        - [x] S3 bucket was created and updated with the data
+        - [ ] Now need to figure out the script which will be used for AWS GLUE
     - [ ] Host the data either in `VERCEL` or `HEROKU` will see which one will be used for this
     - [ ] Use open-source solution for advanced analytics
     - [ ] Make sure to parse the old data from 2004-2014
