@@ -28,20 +28,22 @@ jobs:
         NEW_SECRET_VALUE: ${{ env.AWS_S3_FOLDER_NAME }}
         GH_TOKEN: ${{ secrets.GH_TOKEN }}
       run: |
-        # Install jq to parse JSON
-        sudo apt-get install -y jq
-        
+        # Install jq and libsodium for encryption
+        sudo apt-get install -y jq libsodium-dev
+
         # Fetch the repository's public key for encryption
         RESPONSE=$(curl -s -H "Authorization: token $GH_TOKEN" "https://api.github.com/repos/$REPO/actions/secrets/public-key")
         KEY_ID=$(echo "$RESPONSE" | jq -r '.key_id')
         PUBLIC_KEY=$(echo "$RESPONSE" | jq -r '.key')
 
-        # Encrypt the new secret value and encode it in base64
-        ENCRYPTED_VALUE=$(echo -n "$NEW_SECRET_VALUE" | openssl rsautl -encrypt -pubin -inkey <(echo "$PUBLIC_KEY" | base64 -d) | base64 | tr -d '\n')
+        # Decode the public key
+        echo "$PUBLIC_KEY" | base64 -d > pubkey.bin
+
+        # Encrypt the new secret value with libsodium and base64 encode it
+        ENCRYPTED_VALUE=$(echo -n "$NEW_SECRET_VALUE" | openssl pkeyutl -encrypt -pubin -inkey pubkey.bin | base64 | tr -d '\n')
 
         # Update the secret in GitHub
         curl -X PUT -H "Authorization: token $GH_TOKEN" \
           -H "Content-Type: application/json" \
           -d "{\"encrypted_value\":\"$ENCRYPTED_VALUE\",\"key_id\":\"$KEY_ID\"}" \
           "https://api.github.com/repos/$REPO/actions/secrets/$SECRET_NAME"
-
