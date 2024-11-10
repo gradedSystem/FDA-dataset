@@ -36,11 +36,12 @@ jobs:
         KEY_ID=$(echo "$RESPONSE" | jq -r '.key_id')
         PUBLIC_KEY=$(echo "$RESPONSE" | jq -r '.key')
 
-        # Encrypt the new secret value
-        ENCRYPTED_VALUE=$(echo -n "$NEW_SECRET_VALUE" | openssl pkeyutl -encrypt -pubin -inkey <(echo "$PUBLIC_KEY" | base64 --decode) -hexdump | tr -d ' \n')
+        # Encrypt the new secret value and encode it in base64
+        ENCRYPTED_VALUE=$(echo -n "$NEW_SECRET_VALUE" | openssl rsautl -encrypt -pubin -inkey <(echo "$PUBLIC_KEY" | base64 -d) | base64 | tr -d '\n')
 
         # Update the secret in GitHub
         curl -X PUT -H "Authorization: token $GH_TOKEN" \
           -H "Content-Type: application/json" \
           -d "{\"encrypted_value\":\"$ENCRYPTED_VALUE\",\"key_id\":\"$KEY_ID\"}" \
           "https://api.github.com/repos/$REPO/actions/secrets/$SECRET_NAME"
+
