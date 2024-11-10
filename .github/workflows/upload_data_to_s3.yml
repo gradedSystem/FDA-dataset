@@ -1,0 +1,35 @@
+name: Upload Data to S3
+
+on:
+  schedule:
+    - cron: "0 0 2 * *"  # Runs at midnight UTC on the 2nd day of each month
+  workflow_dispatch:      # Allows manual triggering of the workflow if needed
+
+jobs:
+  upload-data:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          cd scripts
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run upload script
+        env:
+          AWS_S3_BUCKET_NAME: ${{ secrets.AWS_S3_BUCKET_NAME }}
+          AWS_S3_FOLDER_NAME: ${{ secrets.AWS_S3_FOLDER_NAME }}
+          AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
+          AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
+          FDA_API_KEY: ${{ secrets.FDA_API_KEY }}
+        run: |
+          python scripts/upload_file_to_s3.py
