@@ -9,6 +9,7 @@ This data-engineering project is currently using FDA data from [FDA-food-dataset
     - [x] Create `env` in the settings 
     - [ ] Use AWS S3, GLUE in order to process the data
         - [x] S3 bucket was created and updated with the data
+        - [ ] Currently there will be inconsistency in the dataset for November since it is inconsistent and need to be updated
         - [x] Adding GH ACTIONS to update aws folder name yearly
         - [ ] Now need to figure out the script which will be used for AWS GLUE
     - [ ] Host the data either in `VERCEL` or `HEROKU` will see which one will be used for this
