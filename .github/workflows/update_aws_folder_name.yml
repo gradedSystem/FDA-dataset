@@ -2,48 +2,30 @@ name: Update AWS S3 Folder Name Annually
 
 on:
   schedule:
-    - cron: '0 0 1 1 *' # Runs on January 1st at midnight every year
-  workflow_dispatch: # Allows manual trigger
+    - cron: '0 0 1 1 *' # Runs annually on January 1st at midnight
+  workflow_dispatch: # Allows manual triggering
 
 jobs:
   update-secret:
     runs-on: ubuntu-latest
     steps:
-    - name: Calculate New AWS S3 Folder Name
-      id: s3_folder_name
-      run: |
-        # Get the current year
-        CURRENT_YEAR=$(date +'%Y')
-        
-        # Construct the S3 folder name
-        NEW_FOLDER_NAME="fda_current_${CURRENT_YEAR}"
-        
-        # Output the folder name for use in other steps
-        echo "AWS_S3_FOLDER_NAME=${NEW_FOLDER_NAME}" >> $GITHUB_ENV
+      - name: Set Up GitHub CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gh
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
-    - name: Update GitHub Secret for AWS S3 Folder
-      env:
-        REPO: ${{ github.repository }}
-        SECRET_NAME: "AWS_S3_FOLDER_NAME"
-        NEW_SECRET_VALUE: ${{ env.AWS_S3_FOLDER_NAME }}
-        GH_TOKEN: ${{ secrets.GH_TOKEN }}
-      run: |
-        # Install jq and libsodium for encryption
-        sudo apt-get install -y jq libsodium-dev
+      - name: Calculate New AWS S3 Folder Name
+        id: calculate_folder_name
+        run: |
+          CURRENT_YEAR=$(date +'%Y')
+          NEW_FOLDER_NAME="fda_current_${CURRENT_YEAR}"
+          echo "NEW_FOLDER_NAME=${NEW_FOLDER_NAME}" >> $GITHUB_ENV
 
-        # Fetch the repository's public key for encryption
-        RESPONSE=$(curl -s -H "Authorization: token $GH_TOKEN" "https://api.github.com/repos/$REPO/actions/secrets/public-key")
-        KEY_ID=$(echo "$RESPONSE" | jq -r '.key_id')
-        PUBLIC_KEY=$(echo "$RESPONSE" | jq -r '.key')
-
-        # Decode the public key
-        echo "$PUBLIC_KEY" | base64 -d > pubkey.bin
-
-        # Encrypt the new secret value with libsodium and base64 encode it
-        ENCRYPTED_VALUE=$(echo -n "$NEW_SECRET_VALUE" | openssl pkeyutl -encrypt -pubin -inkey pubkey.bin | base64 | tr -d '\n')
-
-        # Update the secret in GitHub
-        curl -X PUT -H "Authorization: token $GH_TOKEN" \
-          -H "Content-Type: application/json" \
-          -d "{\"encrypted_value\":\"$ENCRYPTED_VALUE\",\"key_id\":\"$KEY_ID\"}" \
-          "https://api.github.com/repos/$REPO/actions/secrets/$SECRET_NAME"
+      - name: Update GitHub Secret
+        run: |
+          echo $NEW_FOLDER_NAME | gh secret set AWS_S3_FOLDER_NAME --repo ${{ github.repository }} --body -
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          NEW_FOLDER_NAME: ${{ env.NEW_FOLDER_NAME }}
