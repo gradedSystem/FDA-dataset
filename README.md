@@ -7,7 +7,7 @@ This data-engineering project is currently using FDA data from [FDA-food-dataset
 - TASKS TO DO: 
     - [x] #1 Create `scripts/parse_data.py` which will be used in for GH actions
     - [x] Create `env` in the settings 
-    - [ ] Use AWS S3, ~~GLUE~~ Databricks in order to process the data __(Update using AWS Glue is quite costly for an ETL Instead Databricks will be used)__
+    - [ ] Use AWS S3, ~~GLUE~~ ~~Databricks~~ in order to process the data __(Update using AWS Glue is quite costly for an ETL Instead Dagster will be used)__
         - [x] S3 bucket was created and updated with the data
         - [ ] Currently there will be inconsistency in the dataset for November since it is inconsistent and need to be updated
         - [x] Adding GH ACTIONS to update aws folder name yearly
