@@ -14,6 +14,8 @@ import json
 import requests
 import pandas as pd
 import constants
+import clean_data
+import enrich_data
 
 from datetime import datetime
 from pyspark.sql import Window
@@ -21,6 +23,10 @@ from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType
 from dagster import asset, multi_asset, Definitions, AssetIn, AssetKey, AssetOut
+
+merged = constants.MERGED_FILE_PATH + constants.MERGED_CSV
+enriched = constants.MERGED_FILE_PATH + constants.ENRICHED_CSV  
+geo_enriched = constants.MERGED_FILE_PATH + constants.GEO_ENRICHED_CSV
 
 @asset(
     description = "Create a Merged DataFrame of Food and Drug Recalls",
@@ -49,11 +55,32 @@ def create_merged_dataframe() -> pd.DataFrame:
         .withColumn("termination_date", F.to_date(F.col("termination_date"), "yyyyMMdd")) \
         .withColumn("report_date", F.to_date(F.col("report_date"), "yyyyMMdd"))
 
-    with open(constants.MERGED_FILE_PATH, 'w') as f:
+    merged_df = clean_data(merged_df)
+    enriched_df, geo_enriched_df = enrich_data(merged_df)
+
+    with open(merged, 'w') as f:
         merged_df.toPandas().to_csv(f, header=True, index=False)
+    with open(enriched, 'w') as f:
+        enriched_df.toPandas().to_csv(f, header=True, index=False)
+    with open(geo_enriched, 'w') as f:
+        geo_enriched_df.toPandas().to_csv(f, header=True, index=False)
+
 
 @asset(
     deps = ['create_merged_dataframe'],
+)
+def process() -> None:
+    with open(enriched, 'r') as f:
+        enriched_df = pd.read_csv(f)
+    with open(geo_enriched, 'r') as f:
+        geo_enriched_df = pd.read_csv(f)
+    create_recall_summary_by_product(enriched_df)
+    create_geographic_distribution(geo_enriched_df)
+    create_recall_timeline_analysis(enriched_df)
+    create_recall_firm_analysis(enriched_df)
+
+@asset(
+    deps = ['process'],
 )
 def create_recall_summary_by_product(df) -> None:
     df = df.select("product_type", "classification", "recall_number", 
@@ -63,7 +90,7 @@ def create_recall_summary_by_product(df) -> None:
         df = pd.read_csv(f)
 
 @asset(
-    deps = ['create_merged_dataframe'],
+    deps = ['process'],
 )
 def create_geographic_distribution(df) -> None:
     df = df.select("recall_number", "state", "country", "city", "distribution_pattern", 
@@ -72,7 +99,7 @@ def create_geographic_distribution(df) -> None:
             df = pd.read_csv(f)
 
 @asset(
-    deps = ['create_merged_dataframe'],
+    deps = ['process'],
 )
 def create_recall_timeline_analysis(df) -> None:
     df = df.select("recall_number", "recalling_firm", "recall_initiation_date", 
@@ -80,18 +107,10 @@ def create_recall_timeline_analysis(df) -> None:
     with open(constants.MERGED_FILE_PATH, 'r') as f:
         df = pd.read_csv(f)
 @asset(
-    deps = ['create_merged_dataframe'],
+    deps = ['process'],
 )
 def create_recall_firm_analysis(df) -> None:
     df = df.select("recalling_firm", "product_type", "status", "recall_number", "product_description", 
                      "voluntary_mandated")
     with open(constants.MERGED_FILE_PATH, 'r') as f:
             df = pd.read_csv(f)
-
-@asset(
-    deps = ['create_recall_summary_by_product',
-            'create_geographic_distribution',
-            'create_recall_timeline_analysis',
-            'create_recall_firm_analysis'],
-)
-def process
